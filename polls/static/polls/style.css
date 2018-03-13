@@ -1,0 +1,13 @@
+li a {
+    color: green;
+}
+
+body 
+    {
+        background-color: white;
+        background-image: url("images/background.gif");
+        background-size: auto 100%;
+        background-repeat: no-repeat;
+        background-position: right bottom;
+        height: 100%;
+    }

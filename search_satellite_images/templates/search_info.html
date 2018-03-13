@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+<head>
+    {% block title %}Результаты поиска{% endblock title %}
+{% block content %}
+<link rel="stylesheet" type="text/css" href="{% static 'search_satellite_images/style.css' %}" />
+<style>
+     details {
+     background-color: #dfd6d6;
+     cursor:pointer; /*меняем курсор для красоты*/
+   }
+    .load {
+    display: block;
+    margin-left: auto;
+    margin-right: auto}
+#myBtn {
+    display: none; /* Hidden by default */
+    position: fixed; /* Fixed/sticky position */
+    bottom: 20px; /* Place the button at the bottom of the page */
+    right: 30px; /* Place the button 30px from the right */
+    z-index: 99; /* Make sure it does not overlap */
+    border: none; /* Remove borders */
+    outline: none; /* Remove outline */
+    background-color: #4CAF50; /* Set a background color */
+    color: white; /* Text color */
+    cursor: pointer; /* Add a mouse pointer on hover */
+    padding: 15px; /* Some padding */
+    border-radius: 10px; /* Rounded corners */
+    font-size: 18px; /* Increase font size */
+}
+
+#myBtn:hover {
+    background-color: #555; /* Add a dark-grey background on hover */
+}
+</style>
+</head>
+<body>
+{% autoescape off %}
+    <h2>Результаты поиска</h2>
+    <p>Параметры поиска</p>
+    <div id="params"></div>
+    <script type="text/javascript">
+    var params = document.createElement("table");
+    params.setAttribute("border", "1");
+    document.getElementById("params").appendChild(params);
+
+    for (var key in {{ params }})
+    {
+        var value = {{ params }}[key];
+        if (typeof value == 'object' && !(value instanceof Array))
+        {
+            for (var key_1 in value)
+            {
+                var val = value[key_1];
+                params.innerHTML +=`<tr><td>${key_1}</td><td> ${val} </td></tr>`;
+            }
+        }
+        else params.innerHTML +=`<tr><td>${key}</td><td> ${value} </td></tr>`;
+    }
+    </script>
+<div id ="results">
+<span id="load" style="display: block">LOADING...</span>
+</div>
+    <button onclick="topFunction()" id="myBtn" title="Go to top">Top</button>
+<script type="text/javascript">
+
+function json_features(arr) {
+    for (var i = 0; i < arr.length; i++){
+        var spoiler = document.createElement("details");
+        s_index = "scene number: " + i;
+        spoiler.innerHTML = `<summary><spаn>${s_index}</spаn></summary>`;
+        var table = document.createElement("table");
+        table.setAttribute("border", "1");
+        spoiler.appendChild(table);
+        for (var key in arr[i]){
+            var value = arr[i][key];
+            if (typeof value == 'object' && !(value instanceof Array)) {
+                for (var key_1 in value) {
+                    var val = value[key_1];
+                    if (typeof val == 'object' && !(val instanceof Array))
+                    {
+                        for (var key_2 in val) {
+                            var val_2 = val[key_2];
+                            if (key_2 =='usgs')
+                            {
+                                table.innerHTML += `<tr><td>${key}:${key_1}:${key_2}</td><td> <a href="${val_2}">${val_2}</a> </td></tr>`;
+                            }
+                            else if (val_2 instanceof Array && (key_2=="aws_s3" || key_2=="google"))
+                            {
+                                var tbody  = document.createElement('tbody');
+                                table.appendChild(tbody);
+                                var links = document.createElement('tr');
+                                tbody.appendChild(links);
+                                links.innerHTML +=`<td>${key}:${key_1}:${key_2}</td>`;
+                                var cell = document.createElement('td');
+                                links.appendChild(cell);
+                                for (var c = 0; c < val_2.length; c++){
+                                    cell.innerHTML += `<tr> <a href="${val_2[c]}">${val_2[c]}</a><br> </tr>`; }
+                            }
+                            else if (typeof val_2 == 'object')
+                            {
+                                for (var key_3 in val_2)
+                                {
+                                    var val_3 = val_2[key_3];
+                                    table.innerHTML += `<tr><td>${key}:${key_1}:${key_2}:${key_3}</td><td> ${val_3} </td></tr>`;
+                                }
+                            }
+                            else table.innerHTML += `<tr><td>${key_1}:${key_2}</td><td> ${val_2} </td></tr>`;
+                        }
+                    }
+                    else {
+                        if (key_1 =='thumbnail')
+                            table.innerHTML += `<tr><td>${key_1}</td><td> <input type="image" src="${val}"></td></tr>`;
+                        else if (key_1 =='aws_thumbnail'|| key_1 =='aws_index' || key_1 =='google_index'
+                            || key_1 =='browseURL' || key_1 =='cartURL')
+                        {
+                            table.innerHTML += `<tr><td>${key}:${key_1}</td><td> <a href="${val}">${val}</a> </td></tr>`;
+                        }
+                        else if(key_1 =='scene_id')
+                        {
+                            spoiler.getElementsByTagName("summary")[0].innerHTML += ` scene id: ${val}`;
+                        }
+                        else table.innerHTML += `<tr><td>${key}:${key_1}</td><td> ${val} </td></tr>`;
+                    }
+                }
+            }
+            else {
+                table.innerHTML += `<tr><td> ${key}</td><td> ${value} </td></tr>`;
+            }
+        }
+        document.getElementById("results").appendChild(spoiler);
+    }
+}
+
+window.onload = function () {
+    document.getElementById("load").style.display = "none";
+};
+
+var features = {{ info }}.features;
+json_features(features);
+
+// When the user scrolls down 20px from the top of the document, show the button
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+    if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        document.getElementById("myBtn").style.display = "block";
+    } else {
+        document.getElementById("myBtn").style.display = "none";
+    }
+}
+
+// When the user clicks on the button, scroll to the top of the document
+function topFunction() {
+    document.body.scrollTop = 0; // For Safari
+    document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+}
+
+{% endautoescape %}
+ </script>
+{% endblock content %}
+</body>

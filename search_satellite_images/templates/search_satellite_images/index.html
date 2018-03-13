@@ -1,0 +1,228 @@
+﻿<!doctype html>
+<html lang="en">
+{% extends "base.html" %}
+<head>
+  <meta charset="utf-8">
+  {% block title %}DSI — Download Satellite Images{% endblock title %}
+    {% block content %}
+    <style>
+        input
+        {
+            background-color: #dbd6d6;
+        }
+        h3, h4, h5
+        {
+            color: #2f2626;
+        }
+        .button {
+            width: 150px;
+            white-space: pre-line;
+        }
+        .button:hover {
+  background-color: #b2b1b1;
+}
+        .sidebar{
+            width:300px;
+            height:800px;
+            border:2px solid gray;
+            float:left;
+            word-wrap: break-word;
+            margin: 5px;
+            box-sizing: border-box;
+            padding: 20px;
+            background-color: #dbd6d6;
+        }
+        .map{
+            width:800px; height:600px; margin-left: 315px; position: absolute; z-index: -1;
+        }
+        .overlay {
+	background: #000;
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	z-index: 1000;
+	opacity: .5;
+}
+.visible {
+	background: #fff;
+	position: fixed;
+	left: 50%;
+	top: 50%;
+	margin-top: -200px;
+	overflow: hidden;
+	z-index: 2000;
+	width: 500px;
+	padding: 0px;
+	margin-left: -250px;
+}
+#win button {
+	float: right;
+	line-height: 20px;
+	margin: 1.2em;
+	border: none;
+	background: transparent;
+	color: blue;
+}
+#win button[type="button"]:hover {
+	cursor: pointer;
+	color: navy;
+	text-decoration: underline;
+}
+#win h3 {
+	text-align: center;
+	color: #555;
+}
+.content {
+	padding: 0 1em;
+	border-top: 1px solid #ccc;
+	border-bottom: 1px solid #ccc;
+	background: WhiteSmoke;
+}
+    .slidecontainer {
+    width: 100%; /* Width of the outside container */
+}
+
+/* The slider itself */
+.slider {
+    -webkit-appearance: none;  /* Override default CSS styles */
+    appearance: none;
+    width: 100%; /* Full-width */
+    height: 25px; /* Specified height */
+    background: #423c3c; /* Grey background */
+    outline: none; /* Remove outline */
+    opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+    transition: opacity .2s;
+}
+
+/* Mouse-over effects */
+.slider:hover {
+    opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #4CAF50; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #4CAF50; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+    </style>
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+    <script type="text/javascript">
+        // Как только будет загружен API и готов DOM, выполняем инициализацию
+        ymaps.ready(init);
+
+        function init () {
+            var myMap = new ymaps.Map("map", {
+                    center: [56.317655,43.994362],
+                    zoom: 15,
+                    behaviors: ["drag", "dblClickZoom", "scrollZoom"]
+                });
+
+            function createPolygon() {
+                polygon = new ymaps.GeoObject({
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: []
+                    }
+                });
+                myMap.geoObjects.add(polygon);
+                polygon.editor.startDrawing(); }
+
+            function stopEditPolygon() {
+               polygon.editor.stopEditing();
+               coords = stringify(polygon.geometry.getCoordinates());
+               document.getElementsByName('intersects')[0].value =
+                   `{ "type": "Polygon", "coordinates": ${coords}}`;
+            }
+            document.getElementById('createPolygonButton').addEventListener('click', createPolygon);
+            document.getElementById('stopEditPolygonButton').addEventListener('click', stopEditPolygon);
+            var slider = document.getElementsByName("cloud_to")[0];
+            var output = document.getElementById("demo");
+            output.innerHTML = slider.value;
+
+            slider.oninput = function() {
+              output.innerHTML = this.value; }
+
+
+            function stringify (coords) {
+                var res = '';
+                if (Array.isArray(coords))  {
+                    res = '[ ';
+                    for (var i = 0, l = coords.length; i < l; i++) {
+                        if (i > 0) {
+                            res += ', ';
+                        }
+                        res += stringify(coords[i]);
+                    }
+                    res += ' ]';
+                } else if (typeof coords == 'number') {
+                    res = coords.toPrecision(6);
+                } else if (coords.toString) {
+                    res = coords.toString();
+                }
+                return res;
+            }
+        }
+        function checkform(evt){
+                if (!document.getElementsByName('intersects')[0].value && (!document.getElementsByName('path')[0].value
+                        && !document.getElementsByName('row')[0].value)) {
+                    evt.preventDefault();
+                    document.getElementById('win').style.display='block';
+                    return false;
+                }
+                else return true;
+            }
+    </script>
+</head>
+<body>
+        <div id="win" style="display:none">
+   <div class="overlay"></div>
+      <div class="visible">
+        <h2>Ошибка</h2>
+          <div class="content">
+            <p>Выберите параметры для области космоснимка</p>
+          </div>
+        <button type="button" onClick="getElementById('win').style.display='none';">закрыть</button>
+    </div>
+</div>
+        <form action="info/" method="post" onsubmit="checkform(event)">{% csrf_token %}
+  <h2>Этап 1: скачивание космоснимков по заданным параметрам</h2>
+<div id="sidebar" class="sidebar">
+    <h3>Введите критерии поиска космоснимков</h3>
+    <h4>Выбор спутника </h4>
+    <input type="radio" name="satellite_name" value="landsat">Landsat 8<br>
+    <input type="radio" name="satellite_name" value="sentinel">Sentinel<br>
+    <h4>Выбор области поиска по полигону</h4>
+    <h5>Щелкните левой кнопкой мыши для создания вершин полигона</h5>
+    <input type="button" value="Создать новый полигон" id="createPolygonButton" class="button"/>
+    <input type="button" value="Завершить редактирование полигона" id="stopEditPolygonButton" class="button"/>
+    <input type="hidden" name="intersects">
+    <h4>Выбор периода съемки космоснимков</h4>
+    <h5>C <input type="date" name="date_from"> по <input type="date" name="date_to"></h5>
+    <h4>Ввод Path и Row из Worldwide Reference System</h4>
+    <h5>Path <input type="text" maxlength="3" size="5" name="path">
+    Row<input type="text" maxlength="3" size="5" name="row"></h5>
+    <div class="slidecontainer"><h5>Выбор максимальной облачности</h5>
+  <input type="range" min="1" max="100" value="80" class="slider" name="cloud_to">
+        <p>Значение: <span id="demo"></span></p>
+    </div>
+    <input type="submit" class=button value="Поиск">
+</div>
+<div id="map" class="map"></div>
+         </form>
+{% endblock content %}
+</body>
+</html>
