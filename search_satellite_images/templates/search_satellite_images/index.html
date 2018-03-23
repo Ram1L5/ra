@@ -151,10 +151,10 @@
             document.getElementById('stopEditPolygonButton').addEventListener('click', stopEditPolygon);
             var slider = document.getElementsByName("cloud_to")[0];
             var output = document.getElementById("demo");
-            output.innerHTML = slider.value;
+            output.innerHTML = slider.value+"%";
 
             slider.oninput = function() {
-              output.innerHTML = this.value; }
+              output.innerHTML = this.value+"%"; }
 
 
             function stringify (coords) {
